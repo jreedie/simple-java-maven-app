@@ -1,30 +1,25 @@
 pipeline {
     agent {
-        docker {
-            image 'maven:3-alpine' 
-            args '-v /root/.m2:/root/.m2' 
+        dockerfile {
+        args '''
+                -v /root/.m2:/root/.m2
+                --network host
+      	'''
         }
-    }
-    stages {
-        stage('Build') { 
-            steps {
-                sh 'mvn -B -DskipTests clean package' 
+    }          
+  
+  stages {
+  	stage('vault testing'){
+  		steps{
+  			withCredentials([
+                string(credentialsId:'vault-token', variable: 'VAULT_INIT_TOKEN')
+            ]) {
+                ssh "${VAULT_INIT_TOKEN}"   
+                sh 'cat ~/output.txt'
+                sh 'rm ~/output.txt'
             }
-        }
-        stage('Test') {
-            steps {
-                sh 'mvn test'
-            }
-            post {
-                always {
-                    junit 'target/surefire-reports/*.xml'
-                }
-            }
-        }
-        stage('Deliver') {
-            steps {
-                sh './jenkins/scripts/deliver.sh'
-            }
-        }
-    }
+  		}
+  	}
+
+  }
 }
