@@ -1,25 +1,33 @@
 pipeline {
     agent {
         dockerfile {
-        args '''
-                -v /root/.m2:/root/.m2
-                --network host
-      	'''
+
         }
     }          
   
   stages {
-  	stage('vault testing'){
-  		steps{
-  			withCredentials([
-                string(credentialsId:'vault-token', variable: 'VAULT_INIT_TOKEN')
-            ]) {
-                ssh "${VAULT_INIT_TOKEN}"   
-                sh 'cat ~/output.txt'
-                sh 'rm ~/output.txt'
-            }
-  		}
-  	}
+      stage('Sonar analysis'){
+          steps{
+              withSonarQubeEnv('sonar'){
+                  sh 'mvn clean package sonar:sonar'
+              }
+          }
+      }
+      stage('Quality Gate'){
+          steps{
+              timeout(time: 1, unit: 'HOURS'){
+                  waitForQualityGate abortPipeline: true
+              }
+          }
+      }
 
-  }
+      stage('Did it pass?'){
+          steps{
+              sh 'echo yes'
+          }
+      }
+
+  }	
 }
+
+  
